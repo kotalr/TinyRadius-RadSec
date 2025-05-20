@@ -29,6 +29,8 @@ import org.tinyradius.attribute.RadiusAttribute;
 import org.tinyradius.dictionary.Dictionary;
 import org.tinyradius.packet.AccessRequest;
 import org.tinyradius.packet.AccountingRequest;
+import org.tinyradius.packet.CoaRequest;
+import org.tinyradius.packet.DisconnectRequest;
 import org.tinyradius.packet.RadiusPacket;
 
 /**
@@ -45,6 +47,7 @@ public abstract class RadiusServer implements AbstractRadiusServer {
      * @param client IP address and port number of client
      * @return shared secret or null
      */
+    @Override
     public abstract String getSharedSecret(InetSocketAddress client, String radiusClient, String radiusSecret);
 
     /**
@@ -118,6 +121,21 @@ public abstract class RadiusServer implements AbstractRadiusServer {
         RadiusPacket answer = new RadiusPacket(RadiusPacket.ACCOUNTING_RESPONSE, accountingRequest.getPacketIdentifier());
         copyProxyState(accountingRequest, answer);
         return answer;
+    }
+
+    @Override
+    public RadiusPacket coaRequestReceived(CoaRequest coaRequest, InetSocketAddress client) throws RadiusException {
+        throw new UnsupportedOperationException("Not supported yet. It must be overrided.");
+    }
+
+    @Override
+    public RadiusPacket disconnectRequestReceived(DisconnectRequest disconnectRequest, InetSocketAddress client) throws RadiusException {
+        throw new UnsupportedOperationException("Not supported yet. It must be overrided.");
+    }
+
+    @Override
+    public RadiusPacket radiusPacketReceived(RadiusPacket radiusPacketRequest, InetSocketAddress client) throws RadiusException {
+        throw new UnsupportedOperationException("Not supported yet. It must be overrided.");
     }
 
     /**
@@ -382,13 +400,16 @@ public abstract class RadiusServer implements AbstractRadiusServer {
         // check for duplicates
         if (!isPacketDuplicate(request, remoteAddress)) {
 
-            // handle packets on auth port
             if (request instanceof AccessRequest) {
                 response = accessRequestReceived((AccessRequest) request, remoteAddress);
             } else if (request instanceof AccountingRequest) {
                 response = accountingRequestReceived((AccountingRequest) request, remoteAddress);
+            } else if (request instanceof CoaRequest) {
+                response = coaRequestReceived((CoaRequest) request, remoteAddress);
+            } else if (request instanceof DisconnectRequest) {
+                response = disconnectRequestReceived((DisconnectRequest) request, remoteAddress);
             } else {
-                logger.error("unknown Radius packet type: " + request.getPacketType());
+                response = radiusPacketReceived(request, remoteAddress);
             }
         } else {
             logger.info("ignore duplicate packet");

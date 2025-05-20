@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutorService;
 import javax.net.ssl.SSLContext;
 import org.tinyradius.dictionary.Dictionary;
 import org.tinyradius.packet.AccessRequest;
-import org.tinyradius.packet.AccountingRequest;
+import org.tinyradius.packet.*;
 import org.tinyradius.packet.RadiusPacket;
 
 /**
@@ -32,6 +32,11 @@ public interface AbstractRadiusServer {
 
     public RadiusPacket accountingRequestReceived(AccountingRequest accountingRequest, InetSocketAddress client) throws RadiusException;
 
+    public RadiusPacket coaRequestReceived(CoaRequest coaRequest, InetSocketAddress client) throws RadiusException;
+
+    public RadiusPacket disconnectRequestReceived(DisconnectRequest disconnectRequest, InetSocketAddress client) throws RadiusException;
+
+    public RadiusPacket radiusPacketReceived(RadiusPacket radiusPacketRequest, InetSocketAddress client) throws RadiusException;
 
     public void start(boolean listenAuth, boolean listenAcct);
 
