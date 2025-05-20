@@ -1,6 +1,6 @@
 package org.tinyradius.packet;
 
-import org.toughradius.tester.common.DateTimeUtil;
+import org.tinyradius.util.DateTimeUtil;
 import org.tinyradius.attribute.RadiusAttribute;
 import org.tinyradius.attribute.VendorSpecificAttribute;
 import org.tinyradius.dictionary.AttributeType;
