@@ -22,7 +22,7 @@ import java.util.List;
 public class AccessRequest extends RadiusPacket {
 
     public static final int NT_DIGEST_LENGTH = 16;
-    
+
     /**
      * Passphrase Authentication Protocol
      */
@@ -121,7 +121,7 @@ public class AccessRequest extends RadiusPacket {
     public byte[] getLmResponse() {
         return lmResponse;
     }
-    
+
     /**
      * Retrieves the user name from the RadUser-Name attribute.
      *
@@ -160,7 +160,7 @@ public class AccessRequest extends RadiusPacket {
                 || authProtocol.equals(AUTH_MSCHAPV2))) {
             this.authProtocol = authProtocol;
         } else {
-            throw new IllegalArgumentException("protocol must be pap or chap");
+            throw new IllegalArgumentException("protocol must be pap or chap or mschapv1|2");
         }
     }
 
@@ -185,7 +185,6 @@ public class AccessRequest extends RadiusPacket {
         return getUserPassword().equals(plaintext);
     }
 
-    
     /**
      * Verify that an MSCHAPV1 password is valid
      *
@@ -193,24 +192,22 @@ public class AccessRequest extends RadiusPacket {
      * @return
      */
     public boolean verifyMSChapV1Password(String password) {
-        switch(ntOnly) {
+        switch (ntOnly) {
             case 0x01: {
                 String ntResponse = RadiusUtils.byteArrayToHexString(getNtResponse());
-                String passwordNtResponse = RadiusUtils.byteArrayToHexString(MSCHAP.NtChallengeResponse(getChapChallenge(),  password.getBytes()));
+                String passwordNtResponse = RadiusUtils.byteArrayToHexString(MSCHAP.NtChallengeResponse(getChapChallenge(), password.getBytes()));
                 return ntResponse.equals(passwordNtResponse);
             }
             case 0x00: {
                 String lmResponse = RadiusUtils.byteArrayToHexString(getLmResponse());
-                String passwordLmResponse = RadiusUtils.byteArrayToHexString(MSCHAP.LmChallengeResponse(getChapChallenge(),  password.getBytes()));
+                String passwordLmResponse = RadiusUtils.byteArrayToHexString(MSCHAP.LmChallengeResponse(getChapChallenge(), password.getBytes()));
                 return lmResponse.equals(passwordLmResponse);
             }
         }
-        
+
         return false;
     }
-    
-    
-    
+
     /**
      * Verify that an MSCHAPV2 password is valid
      *
@@ -226,81 +223,27 @@ public class AccessRequest extends RadiusPacket {
         return ntResponse.equals(passwordNtResponse);
     }
 
-    
-    
     /**
      * Creates an MSCHAPV1 response
      */
-    
-    
-
-
     public void addMSCHAPV1Response(RadiusPacket responsePacket, String password, String secret) {
         if (!AUTH_MSCHAPV1.equals(getAuthProtocol())) {
             return;
         }
         byte[] mppe_sendkey = new byte[32];
         byte[] ntHashHash = Authenticator.getPasswordHashHash(password.getBytes());
-        
-        
+
         //memset(mppe_sendkey, 0, 32);
-        Arrays.fill(mppe_sendkey, (byte)0x00);
+        Arrays.fill(mppe_sendkey, (byte) 0x00);
         //memcpy(mppe_sendkey + 8, nthashhash, NT_DIGEST_LENGTH );
-        System.arraycopy(ntHashHash, 0, mppe_sendkey, 8, NT_DIGEST_LENGTH );
-        
-        
-        responsePacket.addOctetAttribute("MS-CHAP-MPPE-Keys",encodePapPassword(mppe_sendkey, RadiusUtil.getUtf8Bytes(secret)));
+        System.arraycopy(ntHashHash, 0, mppe_sendkey, 8, NT_DIGEST_LENGTH);
+
+        responsePacket.addOctetAttribute("MS-CHAP-MPPE-Keys", encodePapPassword(mppe_sendkey, RadiusUtil.getUtf8Bytes(secret)));
         responsePacket.addAttribute("MS-MPPE-Encryption-Policy", new String(new byte[]{0x00, 0x00, 0x00, 0x02}));
         responsePacket.addAttribute("MS-MPPE-Encryption-Type", new String(new byte[]{0x00, 0x00, 0x00, 0x04}));
-        
-        
+
     }
-    
-    
-    /*
 
-        /* now create MPPE attributes 
-        if (inst->use_mppe) {
-                uint8_t mppe_sendkey[34];
-                uint8_t mppe_recvkey[34];
-
-                if (mschap_version == 1) {
-                        RDEBUG2("adding MS-CHAPv1 MPPE keys");
-                        memset(mppe_sendkey, 0, 32);
-
-                        /*
-                         *      According to RFC 2548 we
-                         *      should send NT hash.  But in
-                         *      practice it doesn't work.
-                         *      Instead, we should send nthashhash
-                         *
-                         *      This is an error in RFC 2548.
-                         
-                        /*
-                         *      do_mschap cares to zero nthashhash if NT hash
-                         *      is not available.
-
-
-                        memcpy(mppe_sendkey + 8, nthashhash, NT_DIGEST_LENGTH );
-                        mppe_add_reply(request, "MS-CHAP-MPPE-Keys", mppe_sendkey, 24);
-
-                } else if (mschap_version == 2) {
-                        RDEBUG2("Adding MS-CHAPv2 MPPE keys");
-                        mppe_chap2_gen_keys128(nthashhash, response->vp_octets + 26, mppe_sendkey, mppe_recvkey);
-
-                        mppe_add_reply(request, "MS-MPPE-Recv-Key", mppe_recvkey, 16);
-                        mppe_add_reply(request, "MS-MPPE-Send-Key", mppe_sendkey, 16);
-
-                }
-                pair_make_reply("MS-MPPE-Encryption-Policy",
-                               (inst->require_encryption) ? "0x00000002":"0x00000001", T_OP_EQ);
-                pair_make_reply("MS-MPPE-Encryption-Types",
-                               (inst->require_strong) ? "0x00000004":"0x00000006", T_OP_EQ);
-        } /* else we weren't asked to use MPPE 
-    
-    */
-    
-    
     /**
      * Creates an MSCHAPV2 response
      */
@@ -358,12 +301,9 @@ public class AccessRequest extends RadiusPacket {
         return successResponse;
     }
 
-
-
     protected byte ntOnlyMSCHAPV1Response(byte[] attributeData) throws RadiusException {
         return attributeData[1];
     }
-
 
     protected List<byte[]> decodeMSCHAPV1Response(byte[] attributeData) throws RadiusException {
         List<byte[]> responseComponents = new ArrayList<byte[]>();
@@ -373,7 +313,6 @@ public class AccessRequest extends RadiusPacket {
 
         return responseComponents;
     }
-    
 
     private byte[] getMSCHAPV1LmPassword(byte[] attributeData) throws RadiusException {
         validateMSCHAPResponseAttribute(attributeData);
@@ -383,6 +322,7 @@ public class AccessRequest extends RadiusPacket {
 
         return copyBytes(attributeData, pStart, pLength);
     }
+
     private byte[] getMSCHAPV1NtPassword(byte[] attributeData) throws RadiusException {
         validateMSCHAPResponseAttribute(attributeData);
 
@@ -391,7 +331,6 @@ public class AccessRequest extends RadiusPacket {
 
         return copyBytes(attributeData, pStart, pLength);
     }
-
 
     protected List<byte[]> decodeMSCHAPV2Response(byte[] attributeData) throws RadiusException {
         List<byte[]> responseComponents = new ArrayList<byte[]>();
@@ -433,13 +372,13 @@ public class AccessRequest extends RadiusPacket {
         if (attributeData.length != 50) {
             throw new RadiusException("Invalid MSCHAPV2-Response attribute length");
         }
-/*
+        /*
         int vendorType = new Integer(attributeData[0]);
         if (vendorType != 25 && vendorType != 1) {
 			throw new RadiusException("Invalid MSCHAPV2-Response attribute type");
         }
- */
-        }
+         */
+    }
 
     /**
      * Decrypts the RadUser-Password attribute.
@@ -497,7 +436,6 @@ public class AccessRequest extends RadiusPacket {
         }
     }
 
-    
     /**
      * Sets and encrypts the RadUser-Password attribute.
      *
@@ -545,7 +483,6 @@ public class AccessRequest extends RadiusPacket {
 
     }
 
-    
     /**
      * This method encodes the plaintext user password according to RFC 2865.
      *
@@ -772,7 +709,7 @@ public class AccessRequest extends RadiusPacket {
      * Radius attribute type for MSCHAP Response attribute
      */
     private static final int MSCHAP_RESPONSE = 1;
-    
+
     /*
     
 VENDORATTR      311   MS-CHAP-Response 1        octets
@@ -783,8 +720,7 @@ VENDORATTR      311   MS-MPPE-Recv-Key 17       octet
 VENDORATTR      311   MS-CHAP2-Response 25      octets
 VENDORATTR      311   MS-CHAP2-Success 26       string
 
-    */
-    
+     */
     /**
      * CHAP challenge from a decoded CHAP Access-Request.
      */
