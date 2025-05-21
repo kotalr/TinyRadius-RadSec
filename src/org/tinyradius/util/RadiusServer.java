@@ -542,9 +542,6 @@ public abstract class RadiusServer implements AbstractRadiusServer {
     public void stop() {
         logger.info("stopping Radius server");
         closing = true;
-        if (executor != null) {
-            executor.shutdown();
-        }
         if (authSocket != null) {
             authSocket.close();
         }

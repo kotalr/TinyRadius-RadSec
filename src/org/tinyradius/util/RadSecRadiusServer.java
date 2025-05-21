@@ -90,9 +90,6 @@ public abstract class RadSecRadiusServer extends RadiusServer implements Abstrac
         logger.info("stopping Radius server");
         closing = true;
 
-        if (getExecutor() != null) {
-            getExecutor().shutdown();
-        }
         if (authSocket != null) {
             try {
                 authSocket.close();
